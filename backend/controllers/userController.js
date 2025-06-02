@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 const register = async (req, res) => {
-    const { name, email, password, isAdmin } = req.body;
+    const { name, email, password, isAdmin = false } = req.body;
 
     try {
         // Check if user already exists
