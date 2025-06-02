@@ -139,6 +139,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Contact
 
-Your Name - your.email@example.com
+saabiq - saabiqcs@gmail.com
 
 Project Link: [https://github.com/MDsaabiq/ecommerce](https://github.com/MDsaabiq/ecommerce) 
