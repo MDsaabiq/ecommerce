@@ -40,6 +40,7 @@ function Cart() {
       const response = await axios.get(`${baseUrl}/cart/${user._id}`)
       if (response.data && Array.isArray(response.data)) {
         setCartItems(response.data)
+        console.log(response.data,'cart items')
       } else {
         setCartItems([])
         console.error('Invalid cart data received:', response.data)

@@ -15,8 +15,6 @@ import ViewProducts from './pages/admin/ViewProducts'
 import './App.css'
 import Orders from './pages/Orders'
 
-
-
 const ProtectedAdminRoute = ({ children }) => {
   const { user } = useSelector(state => state.auth)
   
@@ -30,45 +28,47 @@ const ProtectedAdminRoute = ({ children }) => {
 function App() {
   return (
     <BrowserRouter>
-      <div className="min-h-screen flex flex-col">
+      <div className="min-h-screen flex flex-col bg-gray-900">
         <Navbar />
-        <main className="flex-grow">
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<Home />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/products" element={<Products />} />
+        <main className="flex-grow pt-20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/" element={<Home />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/products" element={<Products />} />
 
-            {/* Protected User Routes */}
-            <Route element={<ProtectedRoute />}>
-              <Route path="/cart" element={<Cart />} />
-              <Route path="/orders" element={<Orders />} />
-            </Route>
+              {/* Protected User Routes */}
+              <Route element={<ProtectedRoute />}>
+                <Route path="/cart" element={<Cart />} />
+                <Route path="/orders" element={<Orders />} />
+              </Route>
 
-            {/* Protected Admin Routes */}
-            <Route 
-              path="/admin" 
-              element={
-                <ProtectedAdminRoute>
-                  <AdminDashboard />
-                </ProtectedAdminRoute>
-              }
-            >
-              <Route index element={<Navigate to="products" replace />} />
-              <Route path="products" element={<ViewProducts />} />
-              <Route path="create" element={<CreateProduct />} />
-            </Route>
+              {/* Protected Admin Routes */}
+              <Route 
+                path="/admin" 
+                element={
+                  <ProtectedAdminRoute>
+                    <AdminDashboard />
+                  </ProtectedAdminRoute>
+                }
+              >
+                <Route index element={<Navigate to="products" replace />} />
+                <Route path="products" element={<ViewProducts />} />
+                <Route path="create" element={<CreateProduct />} />
+              </Route>
 
-            {/* Redirect root to admin dashboard if logged in as admin */}
-            <Route 
-              path="/" 
-              element={<Navigate to="/admin" replace />} 
-            />
-          </Routes>
+              {/* Redirect root to admin dashboard if logged in as admin */}
+              <Route 
+                path="/" 
+                element={<Navigate to="/admin" replace />} 
+              />
+            </Routes>
+          </div>
         </main>
-        <footer className="bg-gray-900 text-white py-8 w-full">
-          <div className="container mx-auto px-4">
+        <footer className="bg-gray-900 text-white py-8 mt-[100px] md:mt-[200px] w-screen">
+          <div className="w-full px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col md:flex-row justify-between items-center">
               <div className="mb-4 md:mb-0">
                 <h3 className="text-xl font-bold">E-Commerce Platform</h3>
