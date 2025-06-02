@@ -14,9 +14,8 @@ import CreateProduct from './pages/admin/CreateProduct'
 import ViewProducts from './pages/admin/ViewProducts'
 import './App.css'
 import Orders from './pages/Orders'
-import ProductDetails from './pages/ProductDetails'
-import PrivateRoute from './components/PrivateRoute'
-import AdminRoute from './components/AdminRoute'
+
+
 
 const ProtectedAdminRoute = ({ children }) => {
   const { user } = useSelector(state => state.auth)
@@ -40,7 +39,6 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/products" element={<Products />} />
-            <Route path="/product/:id" element={<ProductDetails />} />
 
             {/* Protected User Routes */}
             <Route element={<ProtectedRoute />}>
