@@ -12,6 +12,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import CreateProduct from './pages/admin/CreateProduct'
 import ViewProducts from './pages/admin/ViewProducts'
+import EditProduct from './pages/admin/EditProduct'
 import './App.css'
 import Orders from './pages/Orders'
 
@@ -57,6 +58,7 @@ function App() {
                 <Route index element={<Navigate to="products" replace />} />
                 <Route path="products" element={<ViewProducts />} />
                 <Route path="create" element={<CreateProduct />} />
+                <Route path="edit/:id" element={<EditProduct />} />
               </Route>
 
               {/* Redirect root to admin dashboard if logged in as admin */}

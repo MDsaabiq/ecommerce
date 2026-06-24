@@ -21,7 +21,7 @@ const AdminDashboard = () => {
           View Products
         </NavLink>
       </div>
-      <div className="mt-4 mb-4">
+      <div className="mt-4 mb-4 ">
         <Outlet />
       </div>
     </div>

@@ -88,6 +88,7 @@ const createOrder = async (req, res) => {
 const addToCart = async (req, res) => {
     try {
         const { productId, userId } = req.body;
+        console.log(req.body)
         if (!userId || !productId) {
             return res.status(400).json({ message: 'User ID and Product ID are required' });
         }
