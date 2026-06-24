@@ -4,10 +4,11 @@ const Product = require('../models/productModel');
 
 
 
-// Get all products
+// Get all products (filtered by owner if userId query param provided)
 const getProducts = async (req, res) => {
     try {
-        const products = await Product.find({});
+        const filter = req.query.userId ? { owner: req.query.userId } : {};
+        const products = await Product.find(filter);
         res.json(products);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -30,30 +31,28 @@ const createProduct = async (req, res) => {
     }
 }
 
-// Update product (admin only)
+// Update product (admin only - owner only)
 const updateProduct = async (req, res) => {
     try {
-        const product = await Product.findByIdAndUpdate(
-            req.params.id,
-            req.body,
-            { new: true }
-        );
-        if (!product) {
-            return res.status(404).json({ message: 'Product not found' });
-        }
-        res.json(product);
+        const product = await Product.findById(req.params.id);
+        if (!product) return res.status(404).json({ message: 'Product not found' });
+        if (product.owner.toString() !== req.body.requesterId)
+            return res.status(403).json({ message: 'Not authorized to edit this product' });
+        const updated = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        res.json(updated);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 }
 
-// Delete product (admin only)
+// Delete product (admin only - owner only)
 const deleteProduct = async (req, res) => {
     try {
-        const product = await Product.findByIdAndDelete(req.params.id);
-        if (!product) {
-            return res.status(404).json({ message: 'Product not found' });
-        }
+        const product = await Product.findById(req.params.id);
+        if (!product) return res.status(404).json({ message: 'Product not found' });
+        if (product.owner.toString() !== req.query.requesterId)
+            return res.status(403).json({ message: 'Not authorized to delete this product' });
+        await Product.findByIdAndDelete(req.params.id);
         res.json({ message: 'Product deleted successfully' });
     } catch (error) {
         res.status(500).json({ message: error.message });

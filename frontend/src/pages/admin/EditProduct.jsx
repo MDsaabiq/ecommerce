@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useSelector } from 'react-redux'
 import { toast } from 'react-toastify'
 import axios from 'axios'
 
 const EditProduct = () => {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { user } = useSelector(state => state.auth)
   const [loading, setLoading] = useState(false)
   const [imageUploading, setImageUploading] = useState(false)
   const [product, setProduct] = useState(null)
@@ -41,7 +43,7 @@ const EditProduct = () => {
     if (imageUploading) { toast.warn('Please wait for image upload'); return }
     setLoading(true)
     try {
-      await axios.put(`${import.meta.env.VITE_REACT_BASE_URL}/products/${id}`, product)
+      await axios.put(`${import.meta.env.VITE_REACT_BASE_URL}/products/${id}`, { ...product, requesterId: user._id })
       toast.success('Product updated successfully!')
       navigate('/admin/products')
     } catch { toast.error('Failed to update product'); setLoading(false) }
