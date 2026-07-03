@@ -8,14 +8,14 @@ pipeline {
         SONARQUBE_SERVER = 'SonarQube'
         GIT_REPO = 'https://github.com/MDsaabiq/ecommerce.git'
         MANIFEST_REPO = 'https://github.com/MDsaabiq/ecommerce-k8s-manifests.git'
-        IMAGE_TAG = ''
+        // BUILD_NUMBER is auto-provided by Jenkins — increments every build, always unique
+        IMAGE_TAG = "${BUILD_NUMBER}"
     }
 
     stages {
 
         stage('Checkout') {
             steps {
-                // Clone the source repo — Jenkins uses the branch that triggered the build
                 git branch: 'main', url: "${GIT_REPO}"
             }
         }
@@ -27,12 +27,8 @@ pipeline {
                 withSonarQubeEnv("${SONARQUBE_SERVER}") {
                     script {
                         def scannerHome = tool 'SonarQube Scanner'
-                        sh """
-                            ${scannerHome}/bin/sonar-scanner \
-                              -Dsonar.projectKey=ecommerce \
-                              -Dsonar.sources=. \
-                              -Dsonar.exclusions=**/node_modules/**,**/dist/**
-                        """
+                        // sonar-project.properties in repo root handles all config
+                        sh "${scannerHome}/bin/sonar-scanner"
                     }
                 }
             }
@@ -50,27 +46,13 @@ pipeline {
 
         stage('Docker Build') {
             steps {
-                script {
-                    // Tag image with git commit SHA — every build is traceable to exact commit
-                    // GIT_COMMIT is provided automatically by Jenkins
-                    def tag = env.GIT_COMMIT.take(7)
-
-                    sh "docker build -t ${FRONTEND_IMAGE}:${tag} ./frontend"
-                    sh "docker build -t ${BACKEND_IMAGE}:${tag} ./backend"
-
-                    // Also tag as latest for convenience
-                    sh "docker tag ${FRONTEND_IMAGE}:${tag} ${FRONTEND_IMAGE}:latest"
-                    sh "docker tag ${BACKEND_IMAGE}:${tag} ${BACKEND_IMAGE}:latest"
-
-                    // Save tag for next stages
-                    env.IMAGE_TAG = tag
-                }
+                sh "docker build -t ${FRONTEND_IMAGE}:${env.IMAGE_TAG} ./frontend"
+                sh "docker build -t ${BACKEND_IMAGE}:${env.IMAGE_TAG} ./backend"
             }
         }
 
         stage('Docker Push') {
             steps {
-                // Use stored DockerHub credentials — never hardcoded
                 withCredentials([usernamePassword(
                     credentialsId: 'dockerid',
                     usernameVariable: 'DOCKER_USER',
@@ -79,8 +61,6 @@ pipeline {
                     sh "echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin"
                     sh "docker push ${FRONTEND_IMAGE}:${env.IMAGE_TAG}"
                     sh "docker push ${BACKEND_IMAGE}:${env.IMAGE_TAG}"
-                    sh "docker push ${FRONTEND_IMAGE}:latest"
-                    sh "docker push ${BACKEND_IMAGE}:latest"
                     sh "docker logout"
                 }
             }
