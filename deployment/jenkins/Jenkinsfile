@@ -66,32 +66,35 @@ pipeline {
             }
         }
 
-        // stage('Update Manifest Repo') {
-        //     steps {
-        //         // Jenkins only job here: update image tag in the GitOps repo
-        //         // ArgoCD watches that repo and deploys — Jenkins never touches Kubernetes
-        //         withCredentials([string(credentialsId: 'github-token', variable: 'GH_TOKEN')]) {
-        //             sh '''
-        //                 # Configure git identity for the commit
-        //                 git config --global user.email "saabiqsaadiq55@gmail.com"
-        //                 git config --global user.name "MDsaabiq"
+        stage('Update Manifest Repo') {
+            steps {
+                // Jenkins only job here: update image tag in the GitOps repo
+                // ArgoCD watches that repo and deploys — Jenkins never touches Kubernetes
+                withCredentials([string(credentialsId: 'github-token', variable: 'GH_TOKEN')]) {
+                    sh '''
+                        # Configure git identity for the commit
+                        git config --global user.email "saabiqsaadiq55@gmail.com"
+                        git config --global user.name "MDsaabiq"
 
-        //                 # Clone the manifest repo
-        //                 git clone https://${GH_TOKEN}@github.com/MDsaabiq/ecommerce-k8s-manifests.git
-        //                 cd ecommerce-k8s-manifests
+                        # Remove existing dir if present from previous run
+                        rm -rf ecommerce-k8s-manifests
 
-        //                 # Replace image tag in deployment files using sed
-        //                 sed -i "s|image: sksaabiq123/ecommerce-frontend:.*|image: sksaabiq123/ecommerce-frontend:${IMAGE_TAG}|g" frontend-deployment.yaml
-        //                 sed -i "s|image: sksaabiq123/ecommerce-backend:.*|image: sksaabiq123/ecommerce-backend:${IMAGE_TAG}|g" backend-deployment.yaml
+                        # Clone the manifest repo
+                        git clone https://${GH_TOKEN}@github.com/MDsaabiq/ecommerce-k8s-manifests.git
+                        cd ecommerce-k8s-manifests
 
-        //                 # Commit and push — this is what ArgoCD detects
-        //                 git add frontend-deployment.yaml backend-deployment.yaml
-        //                 git commit -m "ci: update image tag to ${IMAGE_TAG}"
-        //                 git push origin main
-        //             '''
-        //         }
-        //     }
-        // }
+                        # Replace image tag in deployment files using sed
+                        sed -i "s|image: sksaabiq123/ecommerce-frontend:.*|image: sksaabiq123/ecommerce-frontend:${IMAGE_TAG}|g" frontend-deployment.yaml
+                        sed -i "s|image: sksaabiq123/ecommerce-backend:.*|image: sksaabiq123/ecommerce-backend:${IMAGE_TAG}|g" backend-deployment.yaml
+
+                        # Commit and push — this is what ArgoCD detects
+                        git add frontend-deployment.yaml backend-deployment.yaml
+                        git commit -m "ci: update image tag to ${IMAGE_TAG}"
+                        git push origin main
+                    '''
+                }
+            }
+        }
     }
 
     post {
