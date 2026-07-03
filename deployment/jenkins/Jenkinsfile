@@ -8,6 +8,7 @@ pipeline {
         SONARQUBE_SERVER = 'SonarQube'
         GIT_REPO = 'https://github.com/MDsaabiq/ecommerce.git'
         MANIFEST_REPO = 'https://github.com/MDsaabiq/ecommerce-k8s-manifests.git'
+        IMAGE_TAG = ''
     }
 
     stages {
@@ -121,9 +122,13 @@ pipeline {
             echo "Pipeline failed. Check the stage logs above."
         }
         always {
-            // Clean up local docker images to save disk space on CI server
-            sh "docker rmi ${FRONTEND_IMAGE}:${env.IMAGE_TAG} || true"
-            sh "docker rmi ${BACKEND_IMAGE}:${env.IMAGE_TAG} || true"
+            script {
+                // Only clean up if IMAGE_TAG was actually set
+                if (env.IMAGE_TAG) {
+                    sh "docker rmi ${FRONTEND_IMAGE}:${env.IMAGE_TAG} || true"
+                    sh "docker rmi ${BACKEND_IMAGE}:${env.IMAGE_TAG} || true"
+                }
+            }
         }
     }
 }
