@@ -1,0 +1,129 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKERHUB_USER = 'sksaabiq123'
+        FRONTEND_IMAGE = "${DOCKERHUB_USER}/ecommerce-frontend"
+        BACKEND_IMAGE  = "${DOCKERHUB_USER}/ecommerce-backend"
+        SONARQUBE_SERVER = 'SonarQube'
+        GIT_REPO = 'https://github.com/MDsaabiq/ecommerce.git'
+        MANIFEST_REPO = 'https://github.com/MDsaabiq/ecommerce-k8s-manifests.git'
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                // Clone the source repo — Jenkins uses the branch that triggered the build
+                git branch: 'main', url: "${GIT_REPO}"
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                // withSonarQubeEnv injects SONAR_HOST_URL and SONAR_AUTH_TOKEN automatically
+                // sonarScanner tool name must match what you set in Jenkins → Tools → SonarQube Scanner
+                withSonarQubeEnv("${SONARQUBE_SERVER}") {
+                    script {
+                        def scannerHome = tool 'SonarQube Scanner'
+                        sh """
+                            ${scannerHome}/bin/sonar-scanner \
+                              -Dsonar.projectKey=ecommerce \
+                              -Dsonar.sources=. \
+                              -Dsonar.exclusions=**/node_modules/**,**/dist/**
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                // Wait for SonarQube to return pass/fail verdict
+                // Pipeline fails here if quality gate fails — no image is built
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+
+        stage('Docker Build') {
+            steps {
+                script {
+                    // Tag image with git commit SHA — every build is traceable to exact commit
+                    // GIT_COMMIT is provided automatically by Jenkins
+                    def tag = env.GIT_COMMIT.take(7)
+
+                    sh "docker build -t ${FRONTEND_IMAGE}:${tag} ./frontend"
+                    sh "docker build -t ${BACKEND_IMAGE}:${tag} ./backend"
+
+                    // Also tag as latest for convenience
+                    sh "docker tag ${FRONTEND_IMAGE}:${tag} ${FRONTEND_IMAGE}:latest"
+                    sh "docker tag ${BACKEND_IMAGE}:${tag} ${BACKEND_IMAGE}:latest"
+
+                    // Save tag for next stages
+                    env.IMAGE_TAG = tag
+                }
+            }
+        }
+
+        stage('Docker Push') {
+            steps {
+                // Use stored DockerHub credentials — never hardcoded
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerid',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh "echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin"
+                    sh "docker push ${FRONTEND_IMAGE}:${env.IMAGE_TAG}"
+                    sh "docker push ${BACKEND_IMAGE}:${env.IMAGE_TAG}"
+                    sh "docker push ${FRONTEND_IMAGE}:latest"
+                    sh "docker push ${BACKEND_IMAGE}:latest"
+                    sh "docker logout"
+                }
+            }
+        }
+
+        // stage('Update Manifest Repo') {
+        //     steps {
+        //         // Jenkins only job here: update image tag in the GitOps repo
+        //         // ArgoCD watches that repo and deploys — Jenkins never touches Kubernetes
+        //         withCredentials([string(credentialsId: 'github-token', variable: 'GH_TOKEN')]) {
+        //             sh '''
+        //                 # Configure git identity for the commit
+        //                 git config --global user.email "saabiqsaadiq55@gmail.com"
+        //                 git config --global user.name "MDsaabiq"
+
+        //                 # Clone the manifest repo
+        //                 git clone https://${GH_TOKEN}@github.com/MDsaabiq/ecommerce-k8s-manifests.git
+        //                 cd ecommerce-k8s-manifests
+
+        //                 # Replace image tag in deployment files using sed
+        //                 sed -i "s|image: sksaabiq123/ecommerce-frontend:.*|image: sksaabiq123/ecommerce-frontend:${IMAGE_TAG}|g" frontend-deployment.yaml
+        //                 sed -i "s|image: sksaabiq123/ecommerce-backend:.*|image: sksaabiq123/ecommerce-backend:${IMAGE_TAG}|g" backend-deployment.yaml
+
+        //                 # Commit and push — this is what ArgoCD detects
+        //                 git add frontend-deployment.yaml backend-deployment.yaml
+        //                 git commit -m "ci: update image tag to ${IMAGE_TAG}"
+        //                 git push origin main
+        //             '''
+        //         }
+        //     }
+        // }
+    }
+
+    post {
+        success {
+            echo "Pipeline complete. Image tag: ${env.IMAGE_TAG}. ArgoCD will deploy shortly."
+        }
+        failure {
+            echo "Pipeline failed. Check the stage logs above."
+        }
+        always {
+            // Clean up local docker images to save disk space on CI server
+            sh "docker rmi ${FRONTEND_IMAGE}:${env.IMAGE_TAG} || true"
+            sh "docker rmi ${BACKEND_IMAGE}:${env.IMAGE_TAG} || true"
+        }
+    }
+}
