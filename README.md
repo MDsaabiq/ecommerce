@@ -22,13 +22,13 @@ Jenkins: `http://<EC2-1-public-ip>:8080` &nbsp;|&nbsp; SonarQube: `http://<EC2-1
 
 ## Architecture
 
-![Architecture Diagram](https://via.placeholder.com/900x500?text=Add+Architecture+Diagram+Here)
+![Architecture Diagram](./assets/architecture.png)
 
 > Replace with your image: `![Architecture Diagram](./assets/architecture.png)` — drag-drop into a GitHub Issue to get a hosted URL
 
 ---
 
-## Demo
+## Demo Video
 
 [![Demo Video](click to watch)](https://github.com/user-attachments/assets/8d28043d-25d9-4301-ad2c-4d3599ee9b92)
 
