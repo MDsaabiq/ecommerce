@@ -1,12 +1,13 @@
 import { Link } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
 import { logout } from '../store/slices/authSlice'
+import { selectCartCount } from '../store/slices/cartSlice'
 
 function Navbar() {
   const dispatch = useDispatch()
   const { user } = useSelector(state => state.auth)
-  console.log(user);
-  
+  const cartCount = useSelector(selectCartCount)
+
   return (
     <nav className="fixed top-0 left-0 right-0 bg-netflix-black bg-opacity-95 z-50">
       <div className="container mx-auto px-6">
@@ -23,8 +24,13 @@ function Navbar() {
                 <Link to="/products" className="text-netflix-gray hover:text-white transition-colors">
                   Products
                 </Link>
-                <Link to="/cart" className="text-netflix-gray hover:text-white transition-colors">
+                <Link to="/cart" className="relative text-netflix-gray hover:text-white transition-colors">
                   Cart
+                  {cartCount > 0 && (
+                    <span className="absolute -top-2 -right-4 bg-red-600 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
+                      {cartCount > 99 ? '99+' : cartCount}
+                    </span>
+                  )}
                 </Link>
                 <Link to="/orders" className="text-netflix-gray hover:text-white transition-colors">
                   Orders

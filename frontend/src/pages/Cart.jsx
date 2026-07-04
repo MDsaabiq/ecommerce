@@ -1,31 +1,60 @@
 import { useState, useEffect } from 'react'
-import { useSelector } from 'react-redux'
+import { useSelector, useDispatch } from 'react-redux'
 import { toast } from 'react-toastify'
 import axios from 'axios'
 import { Link } from 'react-router-dom'
 import { useNavigate } from 'react-router-dom'
+import { setCartItems, clearCart } from '../store/slices/cartSlice'
 
 function Cart() {
-  const [cartItems, setCartItems] = useState([])
+  const [cartItems, setCartItemsLocal] = useState([])
   const [loading, setLoading] = useState(true)
   const { user } = useSelector(state => state.auth)
+  const dispatch = useDispatch()
   const navigate = useNavigate()
+
+  const updateCart = (items) => {
+    setCartItemsLocal(items)
+    dispatch(setCartItems(items))
+  }
 
   const handleOrder = async () => {
     try {
       const baseUrl = import.meta.env.VITE_REACT_BASE_URL
-      console.log(`${baseUrl}/cart/order`,'url')
-      const response = await axios.post(`${baseUrl}/cart/order`, {
-        userId: user._id
-      })
-      console.log(response.data)
-      toast.success('Order created successfully',{
-        autoClose: 2000
-      })
+      await axios.post(`${baseUrl}/cart/order`, { userId: user._id })
+      toast.success('Order created successfully', { autoClose: 2000 })
+      dispatch(clearCart())
       navigate('/orders')
     } catch (error) {
       console.error('Order error:', error)
-      toast.error('Failed to create order') 
+      toast.error(error.response?.data?.message || 'Failed to create order')
+    }
+  }
+
+  const handleQuantityChange = async (item, delta) => {
+    const newQty = item.quantity + delta
+    if (newQty < 1) return
+    if (newQty > item.product.stockCount) {
+      toast.error(`Only ${item.product.stockCount} in stock`)
+      return
+    }
+    try {
+      const baseUrl = import.meta.env.VITE_REACT_BASE_URL
+      if (delta === 1) {
+        const res = await axios.post(`${baseUrl}/cart/add`, {
+          productId: item.product._id,
+          userId: user._id,
+        })
+        updateCart(res.data.cart)
+      } else {
+        const res = await axios.post(`${baseUrl}/cart/remove`, {
+          productId: item.product._id,
+          userId: user._id,
+        })
+        updateCart(res.data.cart)
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update quantity')
     }
   }
 
@@ -35,22 +64,19 @@ function Cart() {
         setLoading(false)
         return
       }
-      const baseUrl = import.meta.env.VITE_REACT_BASE_URL 
-      console.log(`${baseUrl}/cart/${user._id}`,'url')
+      const baseUrl = import.meta.env.VITE_REACT_BASE_URL
       const response = await axios.get(`${baseUrl}/cart/${user._id}`)
       if (response.data && Array.isArray(response.data)) {
-        setCartItems(response.data)
-        console.log(response.data,'cart items')
+        updateCart(response.data)
       } else {
-        setCartItems([])
-        console.error('Invalid cart data received:', response.data)
+        updateCart([])
       }
       setLoading(false)
     } catch (error) {
       console.error('Fetch cart error:', error)
       toast.error('Failed to load cart items')
       setLoading(false)
-      setCartItems([])
+      updateCart([])
     }
   }
 
@@ -64,8 +90,6 @@ function Cart() {
   const total = Array.isArray(cartItems) ? cartItems.reduce((sum, item) => {
     return sum + (item.product?.price || 0) * (item.quantity || 0)
   }, 0) : 0
-
-  console.log(cartItems)
 
   if (loading) {
     return (
@@ -145,22 +169,31 @@ function Cart() {
                   <div className="flex items-center justify-between">
                     {/* Quantity Controls */}
                     <div className="flex items-center gap-3 bg-gray-700 rounded-lg p-1">
-                      <button 
-                        className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-600 rounded transition-colors"
+                      <button
+                        onClick={() => handleQuantityChange(item, -1)}
+                        disabled={item.quantity <= 1}
+                        className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-600 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 12H4" />
                         </svg>
                       </button>
                       <span className="w-8 text-center">{item.quantity}</span>
-                      <button 
-                        className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-600 rounded transition-colors"
+                      <button
+                        onClick={() => handleQuantityChange(item, 1)}
+                        disabled={item.quantity >= item.product.stockCount}
+                        className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-600 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        title={item.quantity >= item.product.stockCount ? `Max stock: ${item.product.stockCount}` : ''}
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
                         </svg>
                       </button>
                     </div>
+                    {/* Stock warning */}
+                    {item.quantity >= item.product.stockCount && (
+                      <span className="text-xs text-yellow-400 ml-2">Max stock reached</span>
+                    )}
 
                     {/* Item Total */}
                     <div className="text-right">

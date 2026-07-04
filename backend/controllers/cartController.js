@@ -179,4 +179,41 @@ const fetchOrders = async (req, res) => {
     }
 }
 
-module.exports = { addToCart, getCart,createOrder,fetchOrders }; 
+// Remove one unit from cart (decrement), remove item if quantity reaches 0
+const removeFromCart = async (req, res) => {
+    try {
+        const { productId, userId } = req.body;
+        if (!userId || !productId) {
+            return res.status(400).json({ message: 'User ID and Product ID are required' });
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        const existingCartItem = user.cart.find(
+            item => item.product.toString() === productId
+        );
+
+        if (!existingCartItem) {
+            return res.status(404).json({ message: 'Item not in cart' });
+        }
+
+        if (existingCartItem.quantity > 1) {
+            existingCartItem.quantity -= 1;
+        } else {
+            user.cart = user.cart.filter(item => item.product.toString() !== productId);
+        }
+
+        await user.save();
+        await user.populate('cart.product');
+
+        res.json({ message: 'Cart updated', cart: user.cart });
+    } catch (error) {
+        console.error('Remove from cart error:', error);
+        res.status(500).json({ message: 'Failed to update cart' });
+    }
+};
+
+module.exports = { addToCart, getCart, createOrder, fetchOrders, removeFromCart };
