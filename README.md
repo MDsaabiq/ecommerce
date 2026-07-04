@@ -24,7 +24,6 @@ Jenkins: `http://<EC2-1-public-ip>:8080` &nbsp;|&nbsp; SonarQube: `http://<EC2-1
 
 ![Architecture Diagram](./assets/architecture.png)
 
-> Replace with your image: `![Architecture Diagram](./assets/architecture.png)` — drag-drop into a GitHub Issue to get a hosted URL
 
 ---
 
