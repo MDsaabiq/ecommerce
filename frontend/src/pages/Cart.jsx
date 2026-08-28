@@ -1,30 +1,71 @@
 import { useState, useEffect } from 'react'
-import { useSelector } from 'react-redux'
+import { useSelector, useDispatch } from 'react-redux'
 import { toast } from 'react-toastify'
 import axios from 'axios'
 import { Link } from 'react-router-dom'
 import { useNavigate } from 'react-router-dom'
+import { setCartItems, clearCart } from '../store/slices/cartSlice'
 
 function Cart() {
-  const [cartItems, setCartItems] = useState([])
+  const [cartItems, setCartItemsLocal] = useState([])
   const [loading, setLoading] = useState(true)
   const { user } = useSelector(state => state.auth)
+  const dispatch = useDispatch()
   const navigate = useNavigate()
+
+  const updateCart = (items) => {
+    setCartItemsLocal(items)
+    dispatch(setCartItems(items))
+  }
 
   const handleOrder = async () => {
     try {
       const baseUrl = import.meta.env.VITE_REACT_BASE_URL
-      console.log(`${baseUrl}/cart/order`,'url')
-      const response = await axios.post(`${baseUrl}/cart/order`, {
-      })
-      console.log(response.data)
+      await axios.post(`${baseUrl}/cart/order`)
       toast.success('Order created successfully',{
         autoClose: 2000
       })
+      dispatch(clearCart())
       navigate('/orders')
     } catch (error) {
       console.error('Order error:', error)
       toast.error('Failed to create order') 
+    }
+  }
+
+  const handleQuantityChange = async (item, delta) => {
+    const newQuantity = item.quantity + delta
+    const availableStock = item.product.stockCount
+
+    if (newQuantity < 1) return
+    if (newQuantity > availableStock) {
+      toast.error(`Only ${availableStock} in stock`)
+      return
+    }
+
+    try {
+      const baseUrl = import.meta.env.VITE_REACT_BASE_URL
+      const endpoint = delta > 0 ? '/cart/add' : '/cart/remove'
+      const response = await axios.post(`${baseUrl}${endpoint}`, {
+        productId: item.product._id,
+        ...(delta < 0 && { userId: user._id }),
+      })
+      updateCart(response.data.cart)
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to update quantity')
+    }
+  }
+
+  const handleRemoveItem = async (item) => {
+    try {
+      const baseUrl = import.meta.env.VITE_REACT_BASE_URL
+      const response = await axios.post(`${baseUrl}/cart/remove`, {
+        productId: item.product._id,
+        removeAll: true,
+      })
+      updateCart(response.data.cart)
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to remove item')
     }
   }
 
@@ -35,13 +76,11 @@ function Cart() {
         return
       }
       const baseUrl = import.meta.env.VITE_REACT_BASE_URL 
-      console.log(`${baseUrl}/cart/${user._id}`,'url')
       const response = await axios.get(`${baseUrl}/cart`)
       if (response.data && Array.isArray(response.data)) {
-        setCartItems(response.data)
-        console.log(response.data,'cart items')
+        updateCart(response.data)
       } else {
-        setCartItems([])
+        updateCart([])
         console.error('Invalid cart data received:', response.data)
       }
       setLoading(false)
@@ -49,7 +88,7 @@ function Cart() {
       console.error('Fetch cart error:', error)
       toast.error('Failed to load cart items')
       setLoading(false)
-      setCartItems([])
+      updateCart([])
     }
   }
 
@@ -63,8 +102,6 @@ function Cart() {
   const total = Array.isArray(cartItems) ? cartItems.reduce((sum, item) => {
     return sum + (item.product?.price || 0) * (item.quantity || 0)
   }, 0) : 0
-
-  console.log(cartItems)
 
   if (loading) {
     return (
@@ -132,6 +169,7 @@ function Cart() {
                       <p className="text-red-500 font-bold text-lg mb-4">${item.product.price}</p>
                     </div>
                     <button 
+                      onClick={() => handleRemoveItem(item)}
                       className="text-gray-400 hover:text-red-500 transition-colors"
                       title="Remove item"
                     >
@@ -145,7 +183,9 @@ function Cart() {
                     {/* Quantity Controls */}
                     <div className="flex items-center gap-3 bg-gray-700 rounded-lg p-1">
                       <button 
-                        className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-600 rounded transition-colors"
+                        onClick={() => handleQuantityChange(item, -1)}
+                        disabled={item.quantity <= 1}
+                        className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-600 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 12H4" />
@@ -153,13 +193,20 @@ function Cart() {
                       </button>
                       <span className="w-8 text-center">{item.quantity}</span>
                       <button 
-                        className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-600 rounded transition-colors"
+                        onClick={() => handleQuantityChange(item, 1)}
+                        disabled={item.quantity >= item.product.stockCount}
+                        title={item.quantity >= item.product.stockCount ? `Max stock: ${item.product.stockCount}` : ''}
+                        className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-600 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
                         </svg>
                       </button>
                     </div>
+
+                    {item.quantity >= item.product.stockCount && (
+                      <span className="text-xs text-yellow-400 ml-2">Max stock reached</span>
+                    )}
 
                     {/* Item Total */}
                     <div className="text-right">

@@ -139,6 +139,40 @@ const getCart = async (req, res) => {
     }
 };
 
+// Decrease or remove an item from the cart
+const removeFromCart = async (req, res) => {
+    try {
+        const { productId, removeAll = false } = req.body;
+        const user = await User.findById(req.user._id);
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        const itemIndex = user.cart.findIndex(
+            item => item.product.toString() === productId
+        );
+
+        if (itemIndex === -1) {
+            return res.status(404).json({ message: 'Product not in cart' });
+        }
+
+        if (removeAll || user.cart[itemIndex].quantity <= 1) {
+            user.cart.splice(itemIndex, 1);
+        } else {
+            user.cart[itemIndex].quantity -= 1;
+        }
+
+        await user.save();
+        await user.populate('cart.product');
+
+        res.json({ message: 'Cart updated', cart: user.cart });
+    } catch (error) {
+        console.error('Remove from cart error:', error);
+        res.status(500).json({ message: 'Failed to update cart' });
+    }
+};
+
 const fetchOrders = async (req, res) => {
     try{
         const userId = req.user._id;
@@ -153,4 +187,4 @@ const fetchOrders = async (req, res) => {
     }
 }
 
-module.exports = { addToCart, getCart,createOrder,fetchOrders }; 
+module.exports = { addToCart, getCart, removeFromCart, createOrder, fetchOrders }; 
