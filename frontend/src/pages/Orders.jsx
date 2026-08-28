@@ -21,7 +21,7 @@ const Orders = () => {
         try {
             setLoading(true);
             setError(null);
-            const response = await axios.get(`${import.meta.env.VITE_REACT_BASE_URL}/cart/orders/${user._id}`);
+            const response = await axios.get(`${import.meta.env.VITE_REACT_BASE_URL}/cart/orders`);
             setOrders(response.data);
         } catch (error) {
             console.error('Error fetching orders:', error);

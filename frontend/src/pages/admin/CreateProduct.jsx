@@ -76,7 +76,6 @@ const CreateProduct = () => {
       // Include owner ID from Redux state
       const productData = {
         ...product,
-        owner: user._id
       }
       await axios.post(`${import.meta.env.VITE_REACT_BASE_URL}/products`, productData)
       toast.success('Product created successfully!')

@@ -1,13 +1,11 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { useSelector } from 'react-redux'
 import { toast } from 'react-toastify'
 import axios from 'axios'
 
 const ViewProducts = () => {
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
-  const { user } = useSelector(state => state.auth)
 
   useEffect(() => {
     fetchProducts()
@@ -15,10 +13,10 @@ const ViewProducts = () => {
 
   const fetchProducts = async () => {
     try {
-      const response = await axios.get(`${import.meta.env.VITE_REACT_BASE_URL}/products?userId=${user._id}`)
+      const response = await axios.get(`${import.meta.env.VITE_REACT_BASE_URL}/products/mine`)
       setProducts(response.data)
       setLoading(false)
-    } catch (error) {
+    } catch {
       toast.error('Failed to fetch products')
       setLoading(false)
     }
@@ -28,10 +26,10 @@ const ViewProducts = () => {
     if (!window.confirm('Are you sure you want to delete this product?')) return
 
     try {
-      await axios.delete(`${import.meta.env.VITE_REACT_BASE_URL}/products/${productId}?requesterId=${user._id}`)
+      await axios.delete(`${import.meta.env.VITE_REACT_BASE_URL}/products/${productId}`)
       toast.success('Product deleted successfully')
-      fetchProducts() // Refresh the list
-    } catch (error) {
+      fetchProducts()
+    } catch {
       toast.error('Failed to delete product')
     }
   }

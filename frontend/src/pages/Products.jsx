@@ -56,7 +56,6 @@ function Products() {
     try {
       await axios.post(`${import.meta.env.VITE_REACT_BASE_URL}/cart/add`, {
         productId: selected._id,
-        userId: user._id,
       })
       toast.success('Added to cart!')
       closeModal()

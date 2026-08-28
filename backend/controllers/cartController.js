@@ -5,12 +5,8 @@ const Product = require('../models/productModel');
 // Create order from cart
 const createOrder = async (req, res) => {
     try {
-        const { userId } = req.body;
-        if (!userId) {
-            return res.status(400).json({ message: 'User ID is required' });
-        }
+        const userId = req.user._id;
 
-        // Find user and populate cart with product details
         const user = await User.findById(userId).populate('cart.product');
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
@@ -20,11 +16,9 @@ const createOrder = async (req, res) => {
             return res.status(400).json({ message: 'Cart is empty' });
         }
 
-        // Calculate total and prepare order products
         let total = 0;
         const orderProducts = [];
 
-        // Verify stock and update products
         for (const cartItem of user.cart) {
             const product = await Product.findById(cartItem.product._id);
             
@@ -40,11 +34,9 @@ const createOrder = async (req, res) => {
                 });
             }
 
-            // Update product stock
             product.stockCount -= cartItem.quantity;
             await product.save();
 
-            // Add to order products array
             orderProducts.push({
                 product: product._id,
                 quantity: cartItem.quantity,
@@ -54,7 +46,6 @@ const createOrder = async (req, res) => {
             total += product.price * cartItem.quantity;
         }
 
-        // Create new order
         const newOrder = {
             products: orderProducts,
             total,
@@ -62,15 +53,11 @@ const createOrder = async (req, res) => {
             date: new Date()
         };
 
-        // Add order to user's orders array
         user.orders.push(newOrder);
-        
-        // Clear the cart
         user.cart = [];
 
         await user.save();
 
-        // Populate the order products for response
         await user.populate('orders.products.product');
 
         res.json({
@@ -87,48 +74,41 @@ const createOrder = async (req, res) => {
 // Add to cart
 const addToCart = async (req, res) => {
     try {
-        const { productId, userId } = req.body;
-        console.log(req.body)
-        if (!userId || !productId) {
-            return res.status(400).json({ message: 'User ID and Product ID are required' });
+        const { productId } = req.body;
+        const userId = req.user._id;
+        if (!productId) {
+            return res.status(400).json({ message: 'Product ID is required' });
         }
 
-        // Find the product
         const product = await Product.findById(productId);
         if (!product) {
             return res.status(404).json({ message: 'Product not found' });
         }
 
-        // Check if product is in stock
         if (product.stockCount < 1) {
             return res.status(400).json({ message: 'Product is out of stock' });
         }
 
-        // Find user and update cart
         const user = await User.findById(userId);
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
         
-        // Check if product already in cart
         const existingCartItem = user.cart.find(
             item => item.product.toString() === productId
         );
 
         if (existingCartItem) {
-            // Increment quantity if already in cart
             if(product.stockCount == existingCartItem.quantity){
                 return res.status(401).json({message:'Quantity excided to available'})
             }
             existingCartItem.quantity += 1;
         } else {
-            // Add new item to cart
             user.cart.push({ product: productId });
         }
 
         await user.save();
 
-        // Populate the cart items with product details
         await user.populate('cart.product');
 
         res.json({ 
@@ -145,10 +125,7 @@ const addToCart = async (req, res) => {
 // Get cart items
 const getCart = async (req, res) => {
     try {
-        const { userId } = req.params;
-        if (!userId) {
-            return res.status(400).json({ message: 'User ID is required' });
-        }
+        const userId = req.user._id;
         
         const user = await User.findById(userId).populate('cart.product');
         if (!user) {
@@ -164,10 +141,7 @@ const getCart = async (req, res) => {
 
 const fetchOrders = async (req, res) => {
     try{
-        const {userId} = req.params;
-        if(!userId){
-            return res.status(400).json({message:'User ID is required'})
-        }
+        const userId = req.user._id;
         const user = await User.findById(userId).populate('orders.products.product');
         if(!user){
             return res.status(404).json({message:'User not found'})

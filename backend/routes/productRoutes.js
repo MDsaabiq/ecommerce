@@ -1,17 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const { getProducts, createProduct, updateProduct, deleteProduct } = require('../controllers/productController');
-
-// Configure multer for memory storage
-const storage = multer.memoryStorage();
-const upload = multer({ 
-    storage,
-    limits: {
-        fileSize: 5 * 1024 * 1024 // 5MB limit
-    }
-});
+const { protect, adminOnly } = require('../middleware/authMiddleware');
 
 router.get('/', getProducts);
 router.get('/:id', async (req, res) => {
@@ -24,8 +15,8 @@ router.get('/:id', async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 });
-router.post('/', upload.single('image'), createProduct);
-router.put('/:id', updateProduct);
-router.delete('/:id', deleteProduct);
+router.post('/', protect, adminOnly, createProduct);
+router.put('/:id', protect, adminOnly, updateProduct);
+router.delete('/:id', protect, adminOnly, deleteProduct);
 
 module.exports = router; 

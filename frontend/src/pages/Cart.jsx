@@ -16,7 +16,6 @@ function Cart() {
       const baseUrl = import.meta.env.VITE_REACT_BASE_URL
       console.log(`${baseUrl}/cart/order`,'url')
       const response = await axios.post(`${baseUrl}/cart/order`, {
-        userId: user._id
       })
       console.log(response.data)
       toast.success('Order created successfully',{
@@ -37,7 +36,7 @@ function Cart() {
       }
       const baseUrl = import.meta.env.VITE_REACT_BASE_URL 
       console.log(`${baseUrl}/cart/${user._id}`,'url')
-      const response = await axios.get(`${baseUrl}/cart/${user._id}`)
+      const response = await axios.get(`${baseUrl}/cart`)
       if (response.data && Array.isArray(response.data)) {
         setCartItems(response.data)
         console.log(response.data,'cart items')
