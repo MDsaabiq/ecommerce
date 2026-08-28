@@ -4,10 +4,10 @@ const Product = require('../models/productModel');
 
 
 
-// Get all products (filtered by owner if owner query param provided)
+// Get all products (public or filtered by logged-in owner)
 const getProducts = async (req, res) => {
     try {
-        const filter = req.query.owner === 'me' && req.user ? { owner: req.user._id } : {};
+        const filter = req.user ? { owner: req.user._id } : {};
         const products = await Product.find(filter);
         res.json(products);
     } catch (error) {

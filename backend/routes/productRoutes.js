@@ -5,6 +5,7 @@ const { getProducts, createProduct, updateProduct, deleteProduct } = require('..
 const { protect, adminOnly } = require('../middleware/authMiddleware');
 
 router.get('/', getProducts);
+router.get('/mine', protect, adminOnly, getProducts);
 router.get('/:id', async (req, res) => {
     const Product = require('../models/productModel');
     try {
