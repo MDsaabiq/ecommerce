@@ -8,12 +8,12 @@ Built to understand what real DevOps engineering looks like beyond just writing 
 
 ## Live App
 
-App is deployed on AWS EC2 and served through NGINX Ingress on a Kind Kubernetes cluster:
+App is deployed on AWS EC2 and exposed through Kubernetes NodePort Services on a Kind Kubernetes cluster:
 
 ```
-http://<EC2-2-public-ip>             → Frontend (React)
-http://<EC2-2-public-ip>/api         → Backend API (Node.js)
-http://<EC2-2-public-ip>/api/health  → Health check
+http://<EC2-2-public-ip>:30080              → Frontend (React)
+http://<EC2-2-public-ip>:30500/api          → Backend API (Node.js)
+http://<EC2-2-public-ip>:30500/api/health   → Health check
 ```
 
 Jenkins: `http://<EC2-1-public-ip>:8080` &nbsp;|&nbsp; SonarQube: `http://<EC2-1-public-ip>:9000`
@@ -62,7 +62,6 @@ git push ──► GitHub ──► Jenkins (EC2 #1)
               │  frontend ×2 pods ──► ×5 pods (HPA)  │
               │  backend  ×2 pods ──► ×5 pods (HPA)  │
               │                                       │
-              │  NGINX Ingress                        │
               │    /api/* ──► backend-service:5000    │
               │    /*     ──► frontend-service:80     │
               └───────────────────────────────────────┘
@@ -118,7 +117,7 @@ git push ──► GitHub ──► Jenkins (EC2 #1)
 | **SonarQube** | Static code analysis + quality gate — blocks deploy if thresholds not met |
 | **Kind** | 3-node Kubernetes cluster (1 control-plane + 2 workers) running in Docker on EC2 #2 |
 | **ArgoCD** | Watches `ecommerce-k8s-manifests` repo, syncs cluster state to Git state |
-| **NGINX Ingress** | Single entry point — routes `/api/*` → backend, `/*` → frontend |
+| **NodePort Services** | Direct external access — `:30080` → frontend, `:30500` → backend |
 | **Metrics Server + HPA** | CPU-based auto-scaling, min 2 / max 5 replicas per service |
 | **AWS EC2** | t3.medium (CI) + t3.large (Kubernetes) |
 | **DockerHub** | Image registry — `sksaabiq123/ecommerce-frontend`, `sksaabiq123/ecommerce-backend` |
@@ -135,13 +134,12 @@ AWS
 │
 └── EC2 #2 — Kubernetes Server (t3.large)    ports: 22, 80
     └── Kind Cluster "ecommerce"
-        ├── ecommerce-control-plane   ← host port 80 mapped here → NGINX Ingress
+        ├── ecommerce-control-plane   ← host ports 30080/30500 mapped here
         ├── ecommerce-worker
         ├── ecommerce-worker2
         └── Pods
             ├── frontend  ×2   (React app, served by Nginx)
             ├── backend   ×2   (Node.js API)
-            ├── ingress-nginx-controller   ← pinned to control-plane node
             ├── argocd-server + argocd-application-controller
             └── metrics-server
 ```
@@ -163,7 +161,7 @@ AWS
 Jenkins (CI server) only writes to the manifest repo — it never has cluster access. ArgoCD (on EC2 #2) polls the manifest repo and applies changes itself. This is the GitOps pattern — the cluster is always in the state Git describes, not in the state a script last ran.
 
 **Why Kind instead of EKS?**  
-Real Kubernetes at zero cost. Every concept — Deployments, Services, Ingress, HPA, RBAC, readiness probes — works identically to a cloud-managed cluster.
+Real Kubernetes at zero cost. Every concept — Deployments, Services, NodePort, HPA, RBAC, readiness probes — works identically to a cloud-managed cluster.
 
 **Why tag images with BUILD_NUMBER instead of `latest`?**  
 Every running pod maps to an exact Jenkins build. Rolling back is a one-line change in Git — change the image tag and push. No rebuild, no guesswork about what `latest` actually is.
@@ -201,15 +199,27 @@ If the quality gate fails, no Docker image is built and nothing gets deployed.
 ecommerce-k8s-manifests/
 ├── frontend-deployment.yaml   ← image tag updated by Jenkins on every build
 ├── backend-deployment.yaml    ← image tag updated by Jenkins on every build
-├── frontend-service.yaml
-├── backend-service.yaml
-├── ingress.yaml               ← NGINX, Prefix pathType, /api → backend, / → frontend
+├── frontend-service.yaml      ← NodePort :30080 → frontend pods :80
+├── backend-service.yaml       ← NodePort :30500 → backend pods :5000
 ├── backend-configmap.yaml     ← non-sensitive env vars (PORT, CORS_ORIGIN)
 ├── hpa-frontend.yaml          ← min 2, max 5 replicas, cpu threshold 50%
 └── hpa-backend.yaml           ← min 2, max 5 replicas, cpu threshold 50%
 ```
 
 Secrets (MONGODB_URI, JWT_SECRET, Cloudinary keys) are applied manually with `kubectl create secret` — never committed to Git.
+
+### NodePort External Exposure
+
+The application uses NodePort Services instead of Kubernetes Ingress:
+
+```
+EC2 host :30080 → Kind control-plane :30080 → frontend-service → frontend pods :80
+EC2 host :30500 → Kind control-plane :30500 → backend-service  → backend pods :5000
+```
+
+The Kind cluster is created with `extraPortMappings` for ports `30080` and `30500`, allowing traffic arriving at the EC2 host to reach the corresponding NodePort ports inside the Kind control-plane container.
+
+The frontend uses `VITE_REACT_BASE_URL=http://<EC2_PUBLIC_IP>:30500/api`, so browser API requests go directly to the backend NodePort. Because the frontend (`:30080`) and backend (`:30500`) use different origins, `CORS_ORIGIN` is configured for the frontend origin.
 
 ---
 
