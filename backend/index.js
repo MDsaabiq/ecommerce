@@ -4,13 +4,14 @@ require('dotenv').config();
 const connectDB = require('./config/db');
 
 const app = express();
+const allowedOrigin = process.env.CORS_ORIGIN || 'http://localhost:30080';
 
 // Connect to database
 connectDB();
 
 // Middleware
 app.use(cors({
-    origin: process.env.CORS_ORIGIN || '*',
+    origin: allowedOrigin,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization']

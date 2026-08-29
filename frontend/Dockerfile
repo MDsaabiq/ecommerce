@@ -10,7 +10,7 @@ RUN npm install
 
 # Copy source and build
 # VITE_REACT_BASE_URL is passed at build time as a build argument
-ARG VITE_REACT_BASE_URL=/api
+ARG VITE_REACT_BASE_URL=http://EC2-IP:30500/api
 ENV VITE_REACT_BASE_URL=$VITE_REACT_BASE_URL
 
 COPY . .
