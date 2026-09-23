@@ -29,7 +29,7 @@ Jenkins: `http://<EC2-1-public-ip>:8080` &nbsp;|&nbsp; SonarQube: `http://<EC2-1
 
 ## Demo Video
 
-[![Demo Video](click to watch)](https://github.com/user-attachments/assets/8d28043d-25d9-4301-ad2c-4d3599ee9b92)
+[![Demo Video](click to watch)](https://github.com/user-attachments/assets/a90cd7b1-d5c8-4131-a58f-c564c4b39559)
 
 > **Zero-Downtime Rolling Update — Live CI/CD Pipeline Demo**  
 > Code pushed → Jenkins CI → SonarQube quality gate → Docker build → ArgoCD detects manifest change → Kubernetes rolling update with zero dropped requests
